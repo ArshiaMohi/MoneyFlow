@@ -12,6 +12,8 @@ import com.example.moneyflow.repository.UserRepository;
 import com.example.moneyflow.security.JwtService;
 import com.example.moneyflow.service.interfaces.AuthenticationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +23,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final AuthenticationManager authenticationManager;
 
     @Override
     public UserResponse register(RegisterRequest request) {
@@ -48,9 +51,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())){
-            throw new InvalidPasswordException("Email or Password is incorrect.");
-        }
+
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()
+                )
+        );
 
         String token = jwtService.generateToken(user);
 

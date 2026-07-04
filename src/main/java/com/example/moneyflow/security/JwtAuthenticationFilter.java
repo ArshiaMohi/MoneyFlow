@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -39,19 +40,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String userEmail = jwtService.extractUsername(jwt);
         if (userEmail != null){
-            User user = userRepository.findByEmail(userEmail)
-                    .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+            UserDetails userDetails =
+                    userDetailsService.loadUserByUsername(userEmail);
 
-            UsernamePasswordAuthenticationToken authToken =
-                    new UsernamePasswordAuthenticationToken(
-                            user,
-                            null,
-                            user.getAuthorities()
-                            );
+            if (jwtService.isTokenValid(jwt, userDetails)){
 
-            SecurityContextHolder.getContext().setAuthentication(authToken);
+                UsernamePasswordAuthenticationToken authToken =
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities()
+                        );
+
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+            }
         }
-
         filterChain.doFilter(request, response);
     }
 }
